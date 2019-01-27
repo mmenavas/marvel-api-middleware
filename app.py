@@ -1,23 +1,51 @@
 from flask import (Flask, jsonify)
 from flask_cors import CORS
 
-import random
-import string
+from marvel import marvel
+
+import os
+import signal
+
 
 app = Flask(__name__)
-cors = CORS(app, resources={r"/items": {"origins": "http://localhost:3000"}})
+
+signal.signal(signal.SIGINT, lambda s, f: os._exit(0))
+
+cors = CORS(app, resources={
+    r"/find/*": {"origins": "http://localhost:3000"}
+})
+
+public_key = os.getenv('MARVEL_PUBLIC_KEY', '')
+private_key = os.getenv('MARVEL_PRIVATE_KEY', '')
+marvel_api = marvel.Marvel(public_key, private_key)
 
 
-@app.route('/items')
-def get_items():
-    # Generate values for cards
-    count = 8
-    alphabet = list(string.ascii_uppercase)
-    items = alphabet[0:count]
-    items += items
-    random.shuffle(items)
+@app.route('/find')
+@app.route('/find/')
+@app.route('/find/<name>')
+def find_character(name=""):
+    response = marvel_api.find_character(name)
+    if not response:
+        return jsonify([])
 
-    return jsonify(items)
+    results = response['data']['results']
+    characters = []
+    thumbnail_format = 'standard_medium'
+    image_format = 'standard_amazing'
+
+    for result in results:
+        image = result['thumbnail']
+        if image['path'].find('image_not_available') == -1:
+            character = {
+                "id": result['id'],
+                "name": result['name'],
+                "thumbnail": "{}/{}.{}".format(image['path'], thumbnail_format, image['extension']),
+                "image": "{}/{}.{}".format(image['path'], image_format, image['extension'])
+            }
+            characters.append(character)
+
+    return jsonify(characters)
 
 
-app.run(debug=True, port=8000, host='127.0.0.1')
+app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
+
