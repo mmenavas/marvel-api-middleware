@@ -12,7 +12,7 @@ app = Flask(__name__)
 signal.signal(signal.SIGINT, lambda s, f: os._exit(0))
 
 cors = CORS(app, resources={
-    r"/find/*": {"origins": "http://localhost:3000"}
+    r"/find/*": {"origins": os.getenv('CORS_ORIGIN', '')}
 })
 
 public_key = os.getenv('MARVEL_PUBLIC_KEY', '')
@@ -20,7 +20,12 @@ private_key = os.getenv('MARVEL_PRIVATE_KEY', '')
 marvel_api = marvel.Marvel(public_key, private_key)
 
 
-@app.route('/find')
+@app.route('/')
+def home():
+    message = "Usage: To find a Marvel Comics character, go to '/find/[name]'"
+    return message
+
+
 @app.route('/find/')
 @app.route('/find/<name>')
 def find_character(name=""):
@@ -45,7 +50,4 @@ def find_character(name=""):
             characters.append(character)
 
     return jsonify(characters)
-
-
-app.run(host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
 
