@@ -1,4 +1,5 @@
-import requests
+import urllib3
+import ssl
 
 import time
 import hashlib
@@ -42,5 +43,13 @@ class Marvel:
     @staticmethod
     def fetch_data(url):
         # TODO: Add try/except for error handling
-        r = requests.get(url=url)
+
+        ctx = ssl.create_default_context()
+        ctx.set_ciphers('DEFAULT@SECLEVEL=1')
+        http = urllib3.PoolManager(
+        ssl_version=ssl.PROTOCOL_TLS,
+        ssl_context=ctx)
+
+        # r = requests.get(url=url)
+        r = http.request("GET", url, preload_content=False)
         return r.json()
